@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipGrab — Download videos from any link</title>
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  <link rel="stylesheet" href="{% static 'downloader/css/style.css' %}" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="{% url 'downloader:index' %}">Clip<span>Grab</span></a>
+      <p class="tagline">Paste a link, get your video.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Download videos from Facebook, TikTok, Instagram, X &amp; more</h1>
+      <p class="sub">Paste a link below — or copy one anywhere and we'll pick it up automatically.</p>
+
+      <form id="fetch-form" class="link-form" autocomplete="off">
+        <input
+          type="url"
+          id="url-input"
+          name="url"
+          placeholder="Paste a video link here…"
+          required
+        />
+        <button type="button" id="paste-btn" title="Paste from clipboard">Paste</button>
+        <button type="submit" id="fetch-btn">Download</button>
+      </form>
+
+      <div id="clipboard-toast" class="toast" hidden>
+        <span id="clipboard-toast-text"></span>
+        <button type="button" id="clipboard-toast-use">Use this link</button>
+        <button type="button" id="clipboard-toast-dismiss" aria-label="Dismiss">&times;</button>
+      </div>
+
+      <div id="status" class="status" hidden></div>
+
+      <article id="result-card" class="result-card" hidden>
+        <img id="result-thumb" alt="" />
+        <div class="result-info">
+          <h2 id="result-title"></h2>
+          <p id="result-meta"></p>
+          <div id="quality-list" class="quality-list"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="how-it-works">
+      <h2>How it works</h2>
+      <ol>
+        <li>Copy a video link from Facebook, Instagram, TikTok, X/Twitter, YouTube, Vimeo, Reddit and more.</li>
+        <li>Paste it above (or let us auto-detect it from your clipboard).</li>
+        <li>Pick a quality and download the file straight to your device.</li>
+      </ol>
+      <p class="disclaimer">
+        Only download videos you own or that you have permission to save.
+        Respect the copyright and terms of service of the platform you're downloading from.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>&copy; {% now "Y" %} ClipGrab. Built for personal, non-commercial use.</p>
+    </div>
+  </footer>
+
+  <script src="{% static 'downloader/js/app.js' %}"></script>
+</body>
+</html>
