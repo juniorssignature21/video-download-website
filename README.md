@@ -15,6 +15,12 @@ link. Built on top of [yt-dlp](https://github.com/yt-dlp/yt-dlp).
   and normal paste-into-the-input flow when permission isn't granted.
 - Streams the downloaded file straight back to the browser; no accounts,
   no stored history.
+- Installable as a PWA (Add to Home Screen / desktop install prompt),
+  with a service worker that caches the app shell for instant repeat
+  loads — API calls and downloads are always fetched fresh, never cached.
+- Basic anti-scraping on the JSON API: per-IP rate limiting, a
+  known-scraper/empty User-Agent blocklist, `X-Robots-Tag: noindex` on
+  API responses, and a `robots.txt` that disallows crawling `/api/`.
 
 ## Local setup
 
@@ -49,6 +55,41 @@ production):
 | `DATABASE_URL` | none (uses SQLite) | Postgres URL — set automatically if you attach Railway's Postgres plugin |
 | `DOWNLOAD_TMP_DIR` | system temp dir | Where in-progress downloads are staged |
 | `MAX_DOWNLOAD_MB` | `500` | Per-download size cap |
+| `RATE_LIMIT_FETCH_PER_MIN` | `20` | Max `/api/fetch/` calls per IP per minute |
+| `RATE_LIMIT_DOWNLOAD_PER_MIN` | `10` | Max `/api/download/` calls per IP per minute |
+
+## Anti-scraping
+
+The JSON API (`/api/fetch/`, `/api/download/`) is protected by a few
+lightweight, dependency-free layers — enough to blunt casual scraping,
+not a substitute for a real WAF if this becomes a high-value target:
+
+- **Rate limiting** (`downloader/ratelimit.py`) — a per-client-IP fixed
+  window counter backed by Django's cache. The default `LocMemCache` is
+  per-process, so the effective limit scales with the number of gunicorn
+  workers; point `CACHES` at Redis for a strict shared limit.
+- **User-agent filtering** (`downloader/middleware.py`) — rejects
+  requests to `/api/` from common HTTP-library/scraper user agents (and
+  empty ones) with a 403. Trivially bypassed by spoofing the header, so
+  treat it as a deterrent, not a guarantee.
+- **`robots.txt`** disallows crawling `/api/`, and API responses carry
+  `X-Robots-Tag: noindex, nofollow` so they don't get indexed.
+
+None of this restricts the app's actual purpose (fetching links a user
+pastes) — it only throttles/filters *requests to ClipGrab's own API*.
+
+## Progressive Web App
+
+The site is installable: `manifest.json`, a service worker (`/sw.js`),
+and an in-page **Install app** button (via the `beforeinstallprompt`
+event) let users add it to their home screen or install it as a desktop
+app. The service worker caches the app shell (HTML/CSS/JS/icons) for
+fast repeat loads but explicitly bypasses `/api/*` — fetched video
+metadata and downloaded files are never cached.
+
+Icons live in `downloader/static/downloader/img/`. They were generated
+with `scripts/gen_icons.py` (requires `Pillow`, dev-only — not a runtime
+dependency); re-run it if you want to change the mark.
 
 ## Deploying to Railway
 

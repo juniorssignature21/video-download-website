@@ -18,6 +18,28 @@
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
 
+  const installBtn = document.getElementById("install-btn");
+  let deferredInstallPrompt = null;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installBtn.hidden = false;
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    installBtn.hidden = true;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installBtn.hidden = true;
+    deferredInstallPrompt = null;
+  });
+
   const VIDEO_LINK_RE =
     /https?:\/\/(www\.)?(facebook\.com|fb\.watch|instagram\.com|tiktok\.com|twitter\.com|x\.com|youtube\.com|youtu\.be|vimeo\.com|reddit\.com|dailymotion\.com|twitch\.tv)\/\S+/i;
 

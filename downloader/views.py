@@ -4,10 +4,12 @@ import tempfile
 from pathlib import Path
 
 from django.conf import settings
-from django.http import FileResponse, HttpResponseBadRequest, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
+from django.templatetags.static import static
 from django.views.decorators.http import require_GET, require_POST
 
+from .ratelimit import rate_limit
 from .services import ALLOWED_QUALITIES, VideoFetchError, download_video, fetch_video_info
 
 
@@ -15,6 +17,39 @@ def index(request):
     return render(request, "downloader/index.html")
 
 
+def robots_txt(request):
+    lines = [
+        "User-agent: *",
+        "Allow: /$",
+        "Disallow: /api/",
+        "Disallow: /admin/",
+    ]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")
+
+
+def service_worker(request):
+    precache = [
+        "/",
+        static("downloader/css/style.css"),
+        static("downloader/js/app.js"),
+        static("downloader/manifest.json"),
+        static("downloader/img/icon-192.png"),
+        static("downloader/img/icon-512.png"),
+    ]
+    response = render(
+        request,
+        "downloader/sw.js",
+        {"cache_name": "clipgrab-shell-v1", "precache_json": json.dumps(precache)},
+        content_type="application/javascript",
+    )
+    # Without this header the service worker's scope is limited to the
+    # directory it's served from; we need it to control the whole site.
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+@rate_limit("RATE_LIMIT_FETCH_PER_MIN")
 @require_POST
 def api_fetch_info(request):
     try:
@@ -34,6 +69,7 @@ def api_fetch_info(request):
     return JsonResponse(info)
 
 
+@rate_limit("RATE_LIMIT_DOWNLOAD_PER_MIN")
 @require_GET
 def api_download(request):
     url = (request.GET.get("url") or "").strip()

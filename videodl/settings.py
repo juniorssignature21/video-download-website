@@ -61,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "downloader.middleware.BlockKnownScrapersMiddleware",
 ]
 
 ROOT_URLCONF = "videodl.urls"
@@ -131,3 +132,17 @@ DOWNLOAD_TMP_DIR = os.environ.get("DOWNLOAD_TMP_DIR", "")
 
 # Hard cap on a single download so one request can't fill up disk space.
 MAX_DOWNLOAD_MB = int(os.environ.get("MAX_DOWNLOAD_MB", "500"))
+
+# Backs the rate limiter in downloader/ratelimit.py. LocMemCache is fine
+# for a single-process deploy; point this at Redis for a shared limit
+# across multiple gunicorn workers/instances.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
+# Anti-scraping: per-client-IP request caps on the JSON API, on top of
+# the BlockKnownScrapersMiddleware user-agent filter.
+RATE_LIMIT_FETCH_PER_MIN = int(os.environ.get("RATE_LIMIT_FETCH_PER_MIN", "20"))
+RATE_LIMIT_DOWNLOAD_PER_MIN = int(os.environ.get("RATE_LIMIT_DOWNLOAD_PER_MIN", "10"))
