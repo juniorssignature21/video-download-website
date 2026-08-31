@@ -11,11 +11,36 @@ SECRET_KEY = os.environ.get(
     "dev-insecure-secret-key-change-me-in-production",
 )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
-    h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()
+    h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
+
+# Railway assigns a public domain per environment; trust it automatically
+# so ALLOWED_HOSTS/CSRF don't need to be re-set on every deploy.
+RAILWAY_PUBLIC_DOMAIN = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
+if RAILWAY_PUBLIC_DOMAIN:
+    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RAILWAY_PUBLIC_DOMAIN}")
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["*"] if DEBUG else []
+
+# Railway's proxy terminates TLS and forwards over plain HTTP, so Django
+# needs this header to know the original request was HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Only force HTTPS redirects when actually running behind Railway's
+    # proxy (or explicitly requested) — a bare "DEBUG=False" locally
+    # (e.g. running tests or manage.py check) shouldn't 301 every request.
+    SECURE_SSL_REDIRECT = os.environ.get(
+        "DJANGO_SECURE_SSL_REDIRECT", "True" if RAILWAY_PUBLIC_DOMAIN else "False"
+    ) == "True"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -29,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -64,6 +90,14 @@ DATABASES = {
     }
 }
 
+# If a Postgres plugin is attached on Railway, DATABASE_URL is set
+# automatically — use it instead of the local SQLite file.
+_database_url = os.environ.get("DATABASE_URL")
+if _database_url:
+    import dj_database_url
+
+    DATABASES["default"] = dj_database_url.parse(_database_url, conn_max_age=600)
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -79,6 +113,15 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = []
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Compress static files for whitenoise to serve, without Manifest-style
+# hashed filenames — those require collectstatic to run before the static
+# tag can resolve *any* URL, which would break runserver/manage.py test
+# unless collectstatic had already been run.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

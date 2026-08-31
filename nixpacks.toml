@@ -1,0 +1,5 @@
+[phases.setup]
+aptPkgs = ["ffmpeg"]
+
+[phases.build]
+cmds = ["python manage.py collectstatic --noinput"]
