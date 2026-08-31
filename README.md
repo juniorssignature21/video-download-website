@@ -1,4 +1,4 @@
-# ClipGrab
+# SnagReel
 
 A small Django app for downloading videos from social platforms (Facebook,
 Instagram, TikTok, X/Twitter, YouTube, Vimeo, Reddit, ...) by pasting a
@@ -76,7 +76,7 @@ not a substitute for a real WAF if this becomes a high-value target:
   `X-Robots-Tag: noindex, nofollow` so they don't get indexed.
 
 None of this restricts the app's actual purpose (fetching links a user
-pastes) — it only throttles/filters *requests to ClipGrab's own API*.
+pastes) — it only throttles/filters *requests to SnagReel's own API*.
 
 ## Progressive Web App
 

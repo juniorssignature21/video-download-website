@@ -7,7 +7,7 @@ class IndexViewTests(TestCase):
     def test_index_renders(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ClipGrab")
+        self.assertContains(response, "SnagReel")
 
     def test_fetch_requires_url(self):
         response = self.client.post(

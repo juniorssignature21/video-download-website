@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClipGrab — Download videos from any link</title>
+  <title>SnagReel — Download videos from any link</title>
   <meta name="description" content="Download videos from Facebook, Instagram, TikTok, X, YouTube and more by pasting a link." />
   <meta name="csrf-token" content="{{ csrf_token }}" />
 
@@ -14,14 +14,14 @@
   <link rel="apple-touch-icon" href="{% static 'downloader/img/apple-touch-icon.png' %}" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ClipGrab" />
+  <meta name="apple-mobile-web-app-title" content="SnagReel" />
 
   <link rel="stylesheet" href="{% static 'downloader/css/style.css' %}" />
 </head>
 <body>
   <header class="site-header">
     <div class="wrap">
-      <a class="logo" href="{% url 'downloader:index' %}">Clip<span>Grab</span></a>
+      <a class="logo" href="{% url 'downloader:index' %}">Snag<span>Reel</span></a>
       <p class="tagline">Paste a link, get your video.</p>
       <button type="button" id="install-btn" class="install-btn" hidden>Install app</button>
     </div>
@@ -78,7 +78,7 @@
 
   <footer class="site-footer">
     <div class="wrap">
-      <p>&copy; {% now "Y" %} ClipGrab. Built for personal, non-commercial use.</p>
+      <p>&copy; {% now "Y" %} SnagReel. Built for personal, non-commercial use.</p>
     </div>
   </footer>
 

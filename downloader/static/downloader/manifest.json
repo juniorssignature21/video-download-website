@@ -1,6 +1,6 @@
 {
-  "name": "ClipGrab — Video Downloader",
-  "short_name": "ClipGrab",
+  "name": "SnagReel — Video Downloader",
+  "short_name": "SnagReel",
   "description": "Download videos from Facebook, Instagram, TikTok, X, YouTube and more by pasting a link.",
   "start_url": "/?source=pwa",
   "scope": "/",

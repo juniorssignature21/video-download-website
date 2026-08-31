@@ -39,7 +39,7 @@ def service_worker(request):
     response = render(
         request,
         "downloader/sw.js",
-        {"cache_name": "clipgrab-shell-v1", "precache_json": json.dumps(precache)},
+        {"cache_name": "snagreel-shell-v1", "precache_json": json.dumps(precache)},
         content_type="application/javascript",
     )
     # Without this header the service worker's scope is limited to the
