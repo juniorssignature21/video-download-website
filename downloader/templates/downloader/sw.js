@@ -24,8 +24,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   // Never intercept the API — fetched metadata and downloaded files are
-  // per-request and must always come from the network.
-  if (url.pathname.startsWith("/api/") || request.method !== "GET") {
+  // per-request and must always come from the network. Also skip
+  // non-http(s) requests (e.g. chrome-extension://) — the Cache API
+  // rejects those schemes and extensions can trigger fetch events here.
+  if (
+    url.pathname.startsWith("/api/") ||
+    request.method !== "GET" ||
+    !url.protocol.startsWith("http")
+  ) {
     return;
   }
 
