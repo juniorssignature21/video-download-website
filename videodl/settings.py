@@ -146,4 +146,3 @@ CACHES = {
 # the BlockKnownScrapersMiddleware user-agent filter.
 RATE_LIMIT_FETCH_PER_MIN = int(os.environ.get("RATE_LIMIT_FETCH_PER_MIN", "20"))
 RATE_LIMIT_DOWNLOAD_PER_MIN = int(os.environ.get("RATE_LIMIT_DOWNLOAD_PER_MIN", "10"))
-WHITENOISE_ROOT= BASE_DIR / "public"
