@@ -8,6 +8,7 @@
   const resultTitle = document.getElementById("result-title");
   const resultMeta = document.getElementById("result-meta");
   const qualityList = document.getElementById("quality-list");
+  const cookiesInput = document.getElementById("cookies-input");
 
   const toast = document.getElementById("clipboard-toast");
   const toastText = document.getElementById("clipboard-toast-text");
@@ -156,12 +157,11 @@
 
     qualityList.innerHTML = "";
     (info.qualities || ["best"]).forEach((quality) => {
-      const link = document.createElement("a");
-      link.href = `/api/download/?url=${encodeURIComponent(sourceUrl)}&quality=${encodeURIComponent(
-        quality
-      )}`;
-      link.textContent = QUALITY_LABELS[quality] || quality;
-      qualityList.appendChild(link);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = QUALITY_LABELS[quality] || quality;
+      button.addEventListener("click", () => download(sourceUrl, quality));
+      qualityList.appendChild(button);
     });
   }
 
@@ -174,13 +174,15 @@
     setStatus("Fetching video info…", false);
 
     try {
+      const body = new FormData();
+      body.append("url", url);
+      if (cookiesInput.files[0]) body.append("cookies", cookiesInput.files[0]);
       const response = await fetch("/api/fetch/", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "X-CSRFToken": CSRF_TOKEN,
         },
-        body: JSON.stringify({ url }),
+        body,
       });
       const data = await response.json();
 
@@ -195,4 +197,29 @@
       setStatus("Network error — please try again.", true);
     }
   });
+
+  async function download(url, quality) {
+    setStatus("Downloading…", false);
+    const body = new FormData();
+    body.append("url", url);
+    body.append("quality", quality);
+    if (cookiesInput.files[0]) body.append("cookies", cookiesInput.files[0]);
+    try {
+      const response = await fetch("/api/download/", { method: "POST", headers: { "X-CSRFToken": CSRF_TOKEN }, body });
+      if (!response.ok) {
+        const data = await response.json();
+        setStatus(data.error || "Download failed.", true);
+        return;
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") || "";
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || "video";
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      setStatus("Download ready.", false);
+    } catch (err) { setStatus("Network error — please try again.", true); }
+  }
 })();

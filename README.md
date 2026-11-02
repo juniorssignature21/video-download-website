@@ -58,6 +58,11 @@ production):
 | `RATE_LIMIT_FETCH_PER_MIN` | `20` | Max `/api/fetch/` calls per IP per minute |
 | `RATE_LIMIT_DOWNLOAD_PER_MIN` | `10` | Max `/api/download/` calls per IP per minute |
 
+For YouTube videos that require sign-in, export your browser's YouTube cookies
+as a Netscape-format `cookies.txt` file and attach it using the optional cookie
+file field. The file is used only for that request and removed afterward; do
+not share exported cookies because they grant access to your account.
+
 ## Anti-scraping
 
 The JSON API (`/api/fetch/`, `/api/download/`) is protected by a few

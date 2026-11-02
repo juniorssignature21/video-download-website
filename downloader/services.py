@@ -24,10 +24,10 @@ def _base_opts(**overrides):
     return opts
 
 
-def fetch_video_info(url):
+def fetch_video_info(url, cookie_file=None):
     """Look up metadata + available qualities for a link without downloading it."""
     try:
-        with YoutubeDL(_base_opts()) as ydl:
+        with YoutubeDL(_base_opts(cookiefile=str(cookie_file) if cookie_file else None)) as ydl:
             info = ydl.extract_info(url, download=False)
     except DownloadError as exc:
         raise VideoFetchError(_clean_message(str(exc))) from exc
@@ -70,7 +70,7 @@ def _format_string_for(quality):
     return f"best[height<={height}][ext=mp4]/best[height<={height}]/best"
 
 
-def download_video(url, quality, dest_dir: Path):
+def download_video(url, quality, dest_dir: Path, cookie_file=None):
     """Download the requested quality to dest_dir and return the resulting file path."""
     if quality not in ALLOWED_QUALITIES:
         raise VideoFetchError("Unsupported quality option.")
@@ -80,6 +80,7 @@ def download_video(url, quality, dest_dir: Path):
         format=_format_string_for(quality),
         outtmpl=str(dest_dir / "%(title).80s.%(ext)s"),
         restrictfilenames=True,
+        cookiefile=str(cookie_file) if cookie_file else None,
     )
 
     if quality == "audio" and ffmpeg_available:

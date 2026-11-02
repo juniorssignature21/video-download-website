@@ -1,13 +1,14 @@
 import json
 import shutil
 import tempfile
+import os
 from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
 from django.templatetags.static import static
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_POST
 
 from .ratelimit import rate_limit
 from .services import ALLOWED_QUALITIES, VideoFetchError, download_video, fetch_video_info
@@ -52,28 +53,40 @@ def service_worker(request):
 @rate_limit("RATE_LIMIT_FETCH_PER_MIN")
 @require_POST
 def api_fetch_info(request):
-    try:
-        payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return HttpResponseBadRequest("Invalid JSON body.")
-
-    url = (payload.get("url") or "").strip()
+    if request.content_type == "multipart/form-data":
+        url = (request.POST.get("url") or "").strip()
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON body.")
+        url = (payload.get("url") or "").strip()
     if not url:
         return JsonResponse({"error": "Please paste a video link first."}, status=400)
 
+    cookie_upload = request.FILES.get("cookies")
+    cookie_path = None
     try:
-        info = fetch_video_info(url)
+        if cookie_upload:
+            fd, cookie_path = tempfile.mkstemp(prefix="videodl_cookies_")
+            with os.fdopen(fd, "wb") as cookie_file:
+                for chunk in cookie_upload.chunks():
+                    cookie_file.write(chunk)
+        info = fetch_video_info(url, cookie_path)
     except VideoFetchError as exc:
         return JsonResponse({"error": str(exc)}, status=422)
+    finally:
+        if cookie_path:
+            os.unlink(cookie_path)
 
     return JsonResponse(info)
 
 
 @rate_limit("RATE_LIMIT_DOWNLOAD_PER_MIN")
-@require_GET
 def api_download(request):
-    url = (request.GET.get("url") or "").strip()
-    quality = request.GET.get("quality", "best")
+    params = request.POST if request.method == "POST" else request.GET
+    url = (params.get("url") or "").strip()
+    quality = params.get("quality", "best")
 
     if not url:
         return JsonResponse({"error": "Missing 'url' parameter."}, status=400)
@@ -83,14 +96,24 @@ def api_download(request):
     tmp_root = settings.DOWNLOAD_TMP_DIR or None
     tmpdir = tempfile.mkdtemp(prefix="videodl_", dir=tmp_root)
 
+    cookie_path = None
     try:
-        filepath = download_video(url, quality, Path(tmpdir))
+        cookie_upload = request.FILES.get("cookies")
+        if cookie_upload:
+            fd, cookie_path = tempfile.mkstemp(prefix="videodl_cookies_")
+            with os.fdopen(fd, "wb") as cookie_file:
+                for chunk in cookie_upload.chunks():
+                    cookie_file.write(chunk)
+        filepath = download_video(url, quality, Path(tmpdir), cookie_path)
     except VideoFetchError as exc:
         shutil.rmtree(tmpdir, ignore_errors=True)
         return JsonResponse({"error": str(exc)}, status=422)
     except Exception:
         shutil.rmtree(tmpdir, ignore_errors=True)
         return JsonResponse({"error": "Unexpected error while downloading this video."}, status=500)
+    finally:
+        if cookie_path:
+            os.unlink(cookie_path)
 
     size_mb = filepath.stat().st_size / (1024 * 1024)
     if size_mb > settings.MAX_DOWNLOAD_MB:
