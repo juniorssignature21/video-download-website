@@ -9,3 +9,4 @@ staticfiles/
 media/
 *.log
 .DS_Store
+.virtualenv
