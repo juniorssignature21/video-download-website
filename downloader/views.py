@@ -40,7 +40,7 @@ def service_worker(request):
     response = render(
         request,
         "downloader/sw.js",
-        {"cache_name": "snagreel-shell-v1", "precache_json": json.dumps(precache)},
+        {"cache_name": "snagreel-shell-v2", "precache_json": json.dumps(precache)},
         content_type="application/javascript",
     )
     # Without this header the service worker's scope is limited to the
@@ -73,8 +73,8 @@ def api_fetch_info(request):
                 for chunk in cookie_upload.chunks():
                     cookie_file.write(chunk)
         info = fetch_video_info(url, cookie_path)
-    except VideoFetchError as exc:
-        return JsonResponse({"error": str(exc)}, status=422)
+        except VideoFetchError as exc:
+        return JsonResponse({"error": _helpful_error(exc, cookie_upload)}, status=422)
     finally:
         if cookie_path:
             os.unlink(cookie_path)
@@ -107,7 +107,7 @@ def api_download(request):
         filepath = download_video(url, quality, Path(tmpdir), cookie_path)
     except VideoFetchError as exc:
         shutil.rmtree(tmpdir, ignore_errors=True)
-        return JsonResponse({"error": str(exc)}, status=422)
+        return JsonResponse({"error": _helpful_error(exc, cookie_upload)}, status=422)
     except Exception:
         shutil.rmtree(tmpdir, ignore_errors=True)
         return JsonResponse({"error": "Unexpected error while downloading this video."}, status=500)
@@ -128,3 +128,13 @@ def api_download(request):
     # finished streaming the file back to the client.
     response._resource_closers.append(lambda: shutil.rmtree(tmpdir, ignore_errors=True))
     return response
+
+
+def _helpful_error(exc, cookie_upload):
+    message = str(exc)
+    if "Sign in to confirm" in message and not cookie_upload:
+        return (
+            "YouTube requires authentication for this video. Upload a valid "
+            "Netscape-format YouTube cookies.txt file, then try again."
+        )
+    return message
